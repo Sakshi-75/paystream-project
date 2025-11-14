@@ -14,6 +14,6 @@ public class TransactionController {
 
     @PostMapping("/send-transaction")
     int createTransaction(@RequestBody UserTransaction userTransaction) {
-        return transactionService.createTransaction(userTransaction);
+        return transactionService.initiateTransaction(userTransaction);
     }
 }
