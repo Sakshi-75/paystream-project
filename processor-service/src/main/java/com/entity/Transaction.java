@@ -65,6 +65,5 @@ public class Transaction {
                 ", amount=" + amount +
                 ", currency='" + currency + '\'' +
                 ", timestamp=" + timestamp +
-                '}';
-    }
+                '}';    }
 }

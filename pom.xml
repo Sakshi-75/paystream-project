@@ -23,6 +23,7 @@
 	</developers>
     <modules>
         <module>producer-api</module>
+        <module>processor-service</module>
     </modules>
     <scm>
 		<connection/>
