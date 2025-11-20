@@ -40,6 +40,8 @@ public class TransactionProcessorService {
     private void validateAmount(ValidatedTransaction validatedTransaction) {
         if(validatedTransaction.getTransaction().getAmount()>0)
             validatedTransaction.setValid(true);
+        else
+            throw new RuntimeException("Invalid transaction amount: " + validatedTransaction.getTransaction().getAmount());
     }
 
     private Integer extractTransactionId(String transaction) {
