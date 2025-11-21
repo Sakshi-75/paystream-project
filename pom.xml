@@ -24,6 +24,7 @@
     <modules>
         <module>producer-api</module>
         <module>processor-service</module>
+        <module>dlq-monitor-service</module>
     </modules>
     <scm>
 		<connection/>
