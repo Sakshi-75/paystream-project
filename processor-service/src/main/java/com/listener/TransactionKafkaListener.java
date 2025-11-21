@@ -7,6 +7,7 @@ import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.kafka.support.Acknowledgment;
 
 @Component
 public class TransactionKafkaListener {
@@ -17,11 +18,12 @@ public class TransactionKafkaListener {
 
     @Transactional("kafkaTransactionManager")
     @KafkaListener(topics = "transactions-input", groupId = "paystream-processor-group-v7")
-    public void listen(@Payload String transaction) {
+    public void listen(@Payload String transaction, Acknowledgment acknowledgment) {
         System.out.println("Received a new kafka message:");
         System.out.println(transaction);
         try {
             transactionProcessorService.validateTransaction(transaction);
+            acknowledgment.acknowledge();
         } catch (Exception e) {
             System.out.println("Processing failed for transaction "+ transaction + ". Routing to DLQ: " + e);
             dlqKafkaTemplate.send("transactions-dlq", (transaction+" | Error: "+ e.getMessage()));
