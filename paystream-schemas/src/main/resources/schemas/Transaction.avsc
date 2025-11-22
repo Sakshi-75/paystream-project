@@ -1,0 +1,12 @@
+{
+  "type": "record",
+  "name": "Transaction",
+  "namespace": "com.schemas",
+  "fields": [
+    {"name": "transactionId", "type": "string", "doc": "Unique transaction ID"},
+    {"name": "userId", "type": "string", "doc": "Unique user ID"},
+    {"name": "amount", "type": "double", "doc": "Transaction amount"},
+    {"name": "timestamp", "type": "long", "doc": "Timestamp in milliseconds"},
+    {"name": "currency", "type": ["null", "string"], "default": null}
+  ]
+}

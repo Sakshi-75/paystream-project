@@ -1,5 +1,7 @@
 package com.listener;
 
+import com.exceptions.InvalidTransactionException;
+import com.schemas.Transaction;
 import com.service.TransactionProcessorService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.kafka.annotation.KafkaListener;
@@ -18,13 +20,18 @@ public class TransactionKafkaListener {
 
     @Transactional("kafkaTransactionManager")
     @KafkaListener(topics = "transactions-input", groupId = "paystream-processor-group-v7")
-    public void listen(@Payload String transaction, Acknowledgment acknowledgment) {
+    public void listen(@Payload Transaction transaction, Acknowledgment acknowledgment) {
         System.out.println("Received a new kafka message:");
         System.out.println(transaction);
         try {
             transactionProcessorService.validateTransaction(transaction);
             acknowledgment.acknowledge();
-        } catch (Exception e) {
+        } catch (InvalidTransactionException e) {
+            System.out.println("Invalid transaction encountered: " + e.getMessage() + ". Routing to DLQ.");
+            dlqKafkaTemplate.send("transactions-dlq", (transaction+" | Error: "+ e.getMessage()));
+            acknowledgment.acknowledge();
+        }
+        catch (Exception e) {
             System.out.println("Processing failed for transaction "+ transaction + ". Routing to DLQ: " + e);
             dlqKafkaTemplate.send("transactions-dlq", (transaction+" | Error: "+ e.getMessage()));
             throw new RuntimeException("Unrecoverable error, triggering transaction rollback.", e);

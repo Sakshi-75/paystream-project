@@ -1,28 +1,23 @@
 package com.service;
 
-import com.entity.Transaction;
+import com.exceptions.InvalidTransactionException;
 import com.model.ValidatedTransaction;
-import com.repository.TransactionRepository;
+import com.schemas.Transaction;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.support.SendResult;
 import org.springframework.stereotype.Service;
 
 import java.util.concurrent.CompletableFuture;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+
 
 @Service
 public class TransactionProcessorService {
     @Autowired
-    TransactionRepository transactionRepository;
-    @Autowired
     private KafkaTemplate<String, Object> kafkaTemplate;
     String topic = "transactions-validated";
 
-    public void validateTransaction(String transactionString) {
-        Integer transactionId = extractTransactionId(transactionString);
-        Transaction transaction = transactionRepository.findById(transactionId).get();
+    public void validateTransaction(Transaction transaction) {
         ValidatedTransaction validatedTransaction = new ValidatedTransaction();
         validatedTransaction.setTransaction(transaction);
         validatedTransaction.setValid(false);
@@ -41,22 +36,7 @@ public class TransactionProcessorService {
         if(validatedTransaction.getTransaction().getAmount()>0)
             validatedTransaction.setValid(true);
         else
-            throw new RuntimeException("Invalid transaction amount: " + validatedTransaction.getTransaction().getAmount());
+            throw new InvalidTransactionException("Invalid transaction amount: " + validatedTransaction.getTransaction().getAmount(), validatedTransaction.getTransaction().getTransactionId());
     }
 
-    private Integer extractTransactionId(String transaction) {
-        Pattern pattern = Pattern.compile("transactionId=(\\d+)");
-        Matcher matcher = pattern.matcher(transaction);
-
-        if (matcher.find()) {
-            String idString = matcher.group(1);
-            try {
-                return Integer.parseInt(idString);
-            } catch (NumberFormatException e) {
-                throw new IllegalArgumentException("Found ID, but could not parse it as an Integer: " + idString);
-            }
-        } else {
-            throw new IllegalArgumentException("Transaction ID pattern 'transactionId=...' not found in the string.");
-        }
-    }
 }

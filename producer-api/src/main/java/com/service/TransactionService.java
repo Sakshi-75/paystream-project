@@ -21,7 +21,7 @@ public class TransactionService {
 
     public int initiateTransaction(UserTransaction userTransaction) {
         Transaction transaction = createTransaction(userTransaction);
-        CompletableFuture<SendResult<String, Object>> future = kafkaTemplate.send(topic, transaction.toString());
+        CompletableFuture<SendResult<String, Object>> future = kafkaTemplate.send(topic, transaction);
         future.whenComplete((result, exception) -> {
             if(exception!=null) {
                 System.out.println("Failure:"+exception.getMessage());

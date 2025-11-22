@@ -1,6 +1,7 @@
 package com.model;
 
-import com.entity.Transaction;
+
+import com.schemas.Transaction;
 
 public class ValidatedTransaction {
     private Transaction transaction;

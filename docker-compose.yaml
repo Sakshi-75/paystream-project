@@ -55,3 +55,17 @@ services:
       KAFKA_BROKERCONNECT: kafka:9093
     depends_on:
       - kafka
+  schema-registry:
+    image: confluentinc/cp-schema-registry:latest
+    container_name: schema-registry
+    hostname: schema-registry
+    ports:
+      - "8085:8085" # REST API port
+    environment:
+      SCHEMA_REGISTRY_HOST_NAME: schema-registry
+      SCHEMA_REGISTRY_LISTENERS: http://0.0.0.0:8085
+      # Connect the Schema Registry to the ZooKeeper instance
+      SCHEMA_REGISTRY_KAFKASTORE_CONNECTION_URL: zookeeper:2181
+      SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: kafka:9093
+    depends_on:
+      - kafka
