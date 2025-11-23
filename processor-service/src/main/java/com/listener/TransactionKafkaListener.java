@@ -3,10 +3,10 @@ package com.listener;
 import com.exceptions.InvalidTransactionException;
 import com.schemas.Transaction;
 import com.service.TransactionProcessorService;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.core.KafkaTemplate;
-import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.kafka.support.Acknowledgment;
@@ -20,7 +20,8 @@ public class TransactionKafkaListener {
 
     @Transactional("kafkaTransactionManager")
     @KafkaListener(topics = "transactions-input", groupId = "paystream-processor-group-v7")
-    public void listen(@Payload Transaction transaction, Acknowledgment acknowledgment) {
+    public void listen(ConsumerRecord<String, Transaction> record, Acknowledgment acknowledgment) {
+        Transaction transaction = record.value();
         System.out.println("Received a new kafka message:");
         System.out.println(transaction);
         try {

@@ -60,12 +60,21 @@ services:
     container_name: schema-registry
     hostname: schema-registry
     ports:
-      - "8085:8085" # REST API port
+      - "8085:8081"
     environment:
       SCHEMA_REGISTRY_HOST_NAME: schema-registry
-      SCHEMA_REGISTRY_LISTENERS: http://0.0.0.0:8085
-      # Connect the Schema Registry to the ZooKeeper instance
+      SCHEMA_REGISTRY_LISTENERS: http://0.0.0.0:8081
       SCHEMA_REGISTRY_KAFKASTORE_CONNECTION_URL: zookeeper:2181
       SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: kafka:9093
     depends_on:
       - kafka
+      - kafka # Keep this
+
+    # 👇 CRITICAL FIX: Override the default entrypoint to skip the failing check
+    command:
+      - bash
+      - -c
+      - |
+        /etc/confluent/docker/run & 
+        sleep 5 
+        exec $SCHEMA_REGISTRY_HOME/bin/schema-registry-start /etc/schema-registry/schema-registry.properties
