@@ -1,0 +1,6 @@
+FROM confluentinc/cp-kafka-connect:7.5.0
+USER root
+# change CONNECTOR_ID if you need a different version (owner/name:version)
+ARG CONNECTOR_ID=confluentinc/kafka-connect-jdbc:latest
+RUN set -eux; \
+    confluent-hub install --no-prompt "$CONNECTOR_ID"

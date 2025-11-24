@@ -1,0 +1,12 @@
+{
+  "type": "record",
+  "name": "ValidatedTransaction",
+  "namespace": "com.schemas",
+  "fields": [
+    { "name": "transactionId", "type": "string" },
+    { "name": "amount", "type": "double" },
+    { "name": "currency", "type": "string" },
+    { "name": "timestamp", "type": "string" },
+    { "name": "valid", "type": "boolean" }
+  ]
+}

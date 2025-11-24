@@ -9,6 +9,8 @@ services:
       POSTGRES_DB: 'paystream'
     ports:
       - "5432:5432"
+    networks:
+      - paystream-network
 
   zookeeper:
     image: confluentinc/cp-zookeeper:7.5.0
@@ -18,6 +20,8 @@ services:
       - "2181:2181"
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
+    networks:
+      - paystream-network
 
   kafka:
     image: confluentinc/cp-kafka:7.5.0
@@ -44,6 +48,8 @@ services:
         KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
         KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
         KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+    networks:
+      - paystream-network
 
   kafdrop:
     image: obsidiandynamics/kafdrop:latest
@@ -55,19 +61,75 @@ services:
       KAFKA_BROKERCONNECT: kafka:9093
     depends_on:
       - kafka
+    # ... (After kafka service and before postgres service)
+    networks:
+      - paystream-network
+
+  kafka-connect:
+      build:
+        context: .
+        dockerfile: Dockerfile.kafka-connect
+      image: confluentinc/cp-kafka-connect:7.5.0 # Use an image that includes the JDBC connector
+      container_name: kafka-connect
+      ports:
+        - "8083:8083" # REST API for deploying connectors
+      environment:
+        CONNECT_BOOTSTRAP_SERVERS: kafka:9093 # Connects to the internal Kafka listener
+        CONNECT_REST_PORT: 8083
+        CONNECT_REST_ADVERTISED_HOST_NAME: kafka-connect
+        CONNECT_GROUP_ID: connect-cluster-group
+        CONNECT_CONFIG_STORAGE_TOPIC: connect-configs
+        CONNECT_OFFSET_STORAGE_TOPIC: connect-offsets
+        CONNECT_STATUS_STORAGE_TOPIC: connect-status
+        CONNECT_CONFIG_STORAGE_REPLICATION_FACTOR: "1"
+        CONNECT_OFFSET_STORAGE_REPLICATION_FACTOR: "1"
+        CONNECT_STATUS_STORAGE_REPLICATION_FACTOR: "1"
+        CONNECT_KEY_CONVERTER: org.apache.kafka.connect.storage.StringConverter # Keys are usually strings
+        CONNECT_VALUE_CONVERTER: org.apache.kafka.connect.json.JsonConverter # Values are JSON
+        CONNECT_INTERNAL_KEY_CONVERTER_SCHEMAS_ENABLE: "false"
+        CONNECT_INTERNAL_VALUE_CONVERTER_SCHEMAS_ENABLE: "false"
+        CONNECT_PLUGIN_PATH: "/usr/share/java,/usr/share/confluent-hub-components"
+
+        # Database access configuration
+        CONNECT_JDBC_DRIVER_CLS: org.postgresql.Driver
+        CONNECT_JDBC_URL: jdbc:postgresql://db:5432/paystream # Internal DB hostname/port
+        CONNECT_JDBC_USER: 'postgres'
+        CONNECT_JDBC_PASSWORD: 'postgres'
+
+      # Mount configuration directory and the JDBC driver JAR
+      volumes:
+        # If your image doesn't include the driver, mount it here:
+        # - ./jars/postgresql-jdbc.jar:/usr/share/java/postgresql-jdbc.jar
+        - ./kafka-connect-configs:/etc/kafka-connect/configs # For deploying connector JSON
+        - ./connect-plugins:/usr/share/confluent-hub-components
+      command:
+        - bash
+        - -c
+        - |
+          confluent-hub install --no-prompt confluentinc/kafka-connect-jdbc:10.7.6 && \
+          /etc/confluent/docker/run
+      depends_on:
+        - kafka
+        - db
+      networks:
+        - paystream-network
+      links:
+        - db
+
   schema-registry:
     image: confluentinc/cp-schema-registry:latest
     container_name: schema-registry
     hostname: schema-registry
     ports:
-      - "8085:8081"
+      - "8085:8085"
     environment:
       SCHEMA_REGISTRY_HOST_NAME: schema-registry
-      SCHEMA_REGISTRY_LISTENERS: http://0.0.0.0:8081
+      SCHEMA_REGISTRY_LISTENERS: http://0.0.0.0:8085
       SCHEMA_REGISTRY_KAFKASTORE_CONNECTION_URL: zookeeper:2181
       SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: kafka:9093
+      # Remove all other KAFKA_BROKER/SKIP_PREFLIGHT variables
+
     depends_on:
-      - kafka
       - kafka # Keep this
 
     # 👇 CRITICAL FIX: Override the default entrypoint to skip the failing check
@@ -78,3 +140,10 @@ services:
         /etc/confluent/docker/run & 
         sleep 5 
         exec $SCHEMA_REGISTRY_HOME/bin/schema-registry-start /etc/schema-registry/schema-registry.properties
+
+    networks:
+      - paystream-network
+
+networks:
+    paystream-network:
+      driver: bridge
