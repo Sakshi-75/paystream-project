@@ -132,7 +132,6 @@ services:
     depends_on:
       - kafka # Keep this
 
-    # 👇 CRITICAL FIX: Override the default entrypoint to skip the failing check
     command:
       - bash
       - -c
