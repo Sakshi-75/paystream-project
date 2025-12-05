@@ -18,8 +18,14 @@ services:
     hostname: zookeeper
     ports:
       - "2181:2181"
+      - "9996:9996"   # JMX Prometheus exporter port
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
+      KAFKA_OPTS: "-javaagent:/etc/jmx/jmx_prometheus_javaagent-0.20.0.jar=9996:/etc/jmx/kafka-jmx-config.yaml"
+      ZOOKEEPER_JMX_PORT: 9998
+    volumes:
+      - ./monitoring/jmx_prometheus_javaagent-0.20.0.jar:/etc/jmx/jmx_prometheus_javaagent-0.20.0.jar
+      - ./monitoring/kafka-jmx-config.yaml:/etc/jmx/kafka-jmx-config.yaml
     networks:
       - paystream-network
 
@@ -30,6 +36,7 @@ services:
     ports:
         - "9092:9092"   # External port for Spring Boot apps
         - "9093:9093"   # Internal port for Kafdrop/Connect
+        - "9997:9997"   # JMX Prometheus exporter port
     environment:
         KAFKA_BROKER_ID: 1
         KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
@@ -48,6 +55,14 @@ services:
         KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
         KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
         KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+
+        KAFKA_OPTS: "-javaagent:/etc/jmx/jmx_prometheus_javaagent-0.20.0.jar=9997:/etc/jmx/kafka-jmx-config.yaml"
+        KAFKA_JMX_PORT: 9999
+
+    volumes:
+      - ./monitoring/jmx_prometheus_javaagent-0.20.0.jar:/etc/jmx/jmx_prometheus_javaagent-0.20.0.jar
+      - ./monitoring/kafka-jmx-config.yaml:/etc/jmx/kafka-jmx-config.yaml
+
     networks:
       - paystream-network
 
@@ -73,6 +88,7 @@ services:
       container_name: kafka-connect
       ports:
         - "8083:8083" # REST API for deploying connectors
+        - "9995:9995" # JMX Prometheus exporter port
       environment:
         CONNECT_BOOTSTRAP_SERVERS: kafka:9093 # Connects to the internal Kafka listener
         CONNECT_REST_PORT: 8083
@@ -96,12 +112,16 @@ services:
         CONNECT_JDBC_USER: 'postgres'
         CONNECT_JDBC_PASSWORD: 'postgres'
 
+        KAFKA_OPTS: "-javaagent:/etc/jmx/jmx_prometheus_javaagent-0.20.0.jar=9995:/etc/jmx/kafka-jmx-config.yaml"
+
       # Mount configuration directory and the JDBC driver JAR
       volumes:
         # If your image doesn't include the driver, mount it here:
         # - ./jars/postgresql-jdbc.jar:/usr/share/java/postgresql-jdbc.jar
         - ./kafka-connect-configs:/etc/kafka-connect/configs # For deploying connector JSON
         - ./connect-plugins:/usr/share/confluent-hub-components
+        - ./monitoring/jmx_prometheus_javaagent-0.20.0.jar:/etc/jmx/jmx_prometheus_javaagent-0.20.0.jar
+        - ./monitoring/kafka-jmx-config.yaml:/etc/jmx/kafka-jmx-config.yaml
       command:
         - bash
         - -c
@@ -142,6 +162,18 @@ services:
 
     networks:
       - paystream-network
+  prometheus:
+    image: prom/prometheus
+    container_name: prometheus
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+    ports:
+      - "9090:9090"
+    networks:
+      - paystream-network
+
 
 networks:
     paystream-network:

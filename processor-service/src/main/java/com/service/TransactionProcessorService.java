@@ -27,7 +27,6 @@ public class TransactionProcessorService {
                                                     .setValid(false)
                                                     .build();
         validateAmount(validatedTransaction);
-        validateUser(transaction.getUserId());
         CompletableFuture<SendResult<String, ValidatedTransaction>> future = kafkaTemplate.send(topic, validatedTransaction);
         future.whenComplete((result, exception) -> {
             if(exception!=null) {
