@@ -1,5 +1,6 @@
 package com.listener;
 
+import com.config.DlqMetrics;
 import com.exceptions.InvalidTransactionException;
 import com.schemas.Transaction;
 import com.service.TransactionProcessorService;
@@ -17,6 +18,8 @@ public class TransactionKafkaListener {
     TransactionProcessorService transactionProcessorService;
     @Autowired
     KafkaTemplate<String, String> dlqKafkaTemplate;
+    @Autowired
+    DlqMetrics dlqMetrics;
 
     @Transactional("kafkaTransactionManager")
     @KafkaListener(topics = "transactions-input", groupId = "paystream-processor-group-v7")
@@ -30,11 +33,13 @@ public class TransactionKafkaListener {
         } catch (InvalidTransactionException e) {
             System.out.println("Invalid transaction encountered: " + e.getMessage() + ". Routing to DLQ.");
             dlqKafkaTemplate.send("transactions-dlq", (transaction+" | Error: "+ e.getMessage()));
+            dlqMetrics.increment();
             acknowledgment.acknowledge();
         }
         catch (Exception e) {
             System.out.println("Processing failed for transaction "+ transaction + ". Routing to DLQ: " + e);
             dlqKafkaTemplate.send("transactions-dlq", (transaction+" | Error: "+ e.getMessage()));
+            dlqMetrics.increment();
             throw new RuntimeException("Unrecoverable error, triggering transaction rollback.", e);
         }
     }

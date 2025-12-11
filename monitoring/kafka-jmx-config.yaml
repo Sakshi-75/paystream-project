@@ -1,2 +1,21 @@
 rules:
-  - pattern: ".*"
+  # Messages In per topic
+  - pattern: "kafka.server<type=BrokerTopicMetrics, name=MessagesInPerSec, topic=(.*)><>OneMinuteRate"
+    name: kafka_messages_in_per_sec
+    labels:
+      topic: "$1"
+    type: GAUGE
+
+  # Bytes In per topic
+  - pattern: "kafka.server<type=BrokerTopicMetrics, name=BytesInPerSec, topic=(.*)><>OneMinuteRate"
+    name: kafka_bytes_in_per_sec
+    labels:
+      topic: "$1"
+    type: GAUGE
+
+  # Bytes Out per topic
+  - pattern: "kafka.server<type=BrokerTopicMetrics, name=BytesOutPerSec, topic=(.*)><>OneMinuteRate"
+    name: kafka_bytes_out_per_sec
+    labels:
+      topic: "$1"
+    type: GAUGE

@@ -1,0 +1,114 @@
+{
+  "id": null,
+  "uid": "kafka-pipeline-dashboard",
+  "title": "Kafka Processing Pipeline Dashboard",
+  "tags": ["kafka", "streaming", "pipeline", "paystream"],
+  "timezone": "browser",
+  "schemaVersion": 38,
+  "version": 2,
+  "refresh": "5s",
+  "panels": [
+    {
+      "type": "stat",
+      "title": "Total Consumer Lag",
+      "id": 1,
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "sum(kafka_consumergroup_lag)",
+          "legendFormat": "Total Lag",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto"
+      },
+      "gridPos": { "x": 0, "y": 0, "w": 8, "h": 4 }
+    },
+
+    {
+      "type": "timeseries",
+      "title": "Consumer Lag by Topic",
+      "id": 2,
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "sum(kafka_consumergroup_lag) by (topic)",
+          "legendFormat": "{{topic}}",
+          "refId": "A"
+        }
+      ],
+      "gridPos": { "x": 8, "y": 0, "w": 16, "h": 8 }
+    },
+
+    {
+      "type": "stat",
+      "title": "DLQ Events (Last 5m)",
+      "id": 3,
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "increase(paystream_dlq_total[5m])",
+          "legendFormat": "DLQ Events",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none"
+      },
+      "gridPos": { "x": 0, "y": 4, "w": 8, "h": 4 }
+    },
+
+    {
+      "type": "timeseries",
+      "title": "DLQ Rate (msg/sec)",
+      "id": 4,
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "sum(kafka_messages_in_per_sec{topic=\"transactions-dlq\"})",
+          "legendFormat": "DLQ Topic Rate",
+          "refId": "A"
+        }
+      ],
+      "gridPos": { "x": 0, "y": 8, "w": 12, "h": 8 }
+    },
+
+    {
+      "type": "timeseries",
+      "title": "Processing Throughput (msg/sec)",
+      "id": 5,
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "rate(spring_kafka_listener_seconds_count[1m])",
+          "legendFormat": "Processing Rate",
+          "refId": "A"
+        }
+      ],
+      "gridPos": { "x": 12, "y": 8, "w": 12, "h": 8 }
+    },
+
+    {
+      "type": "stat",
+      "title": "Current Processing Rate",
+      "id": 6,
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "rate(spring_kafka_listener_seconds_count[30s])",
+          "legendFormat": "msg/sec",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none"
+      },
+      "gridPos": { "x": 0, "y": 16, "w": 8, "h": 4 }
+    }
+  ]
+}
