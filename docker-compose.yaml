@@ -59,6 +59,15 @@ services:
         KAFKA_OPTS: "-javaagent:/etc/jmx/jmx_prometheus_javaagent-0.20.0.jar=9997:/etc/jmx/kafka-jmx-config.yaml"
         KAFKA_JMX_PORT: 9999
 
+        # REQUIRED for Kafka to expose broker/topic metrics
+        KAFKA_METRIC_REPORTERS: "org.apache.kafka.common.metrics.JmxReporter"
+        KAFKA_AUTO_INCLUDE_JMX_REPORTER: "true"
+
+      # REQUIRED to expose topic-level metrics
+        KAFKA_JMX_OPTS: "-Dcom.sun.management.jmxremote
+                          -Dcom.sun.management.jmxremote.authenticate=false
+                          -Dcom.sun.management.jmxremote.ssl=false"
+
     volumes:
       - ./monitoring/jmx_prometheus_javaagent-0.20.0.jar:/etc/jmx/jmx_prometheus_javaagent-0.20.0.jar
       - ./monitoring/kafka-jmx-config.yaml:/etc/jmx/kafka-jmx-config.yaml
@@ -114,7 +123,7 @@ services:
 
         KAFKA_OPTS: "-javaagent:/etc/jmx/jmx_prometheus_javaagent-0.20.0.jar=9995:/etc/jmx/kafka-jmx-config.yaml"
 
-      # Mount configuration directory and the JDBC driver JAR
+    # Mount configuration directory and the JDBC driver JAR
       volumes:
         # If your image doesn't include the driver, mount it here:
         # - ./jars/postgresql-jdbc.jar:/usr/share/java/postgresql-jdbc.jar
@@ -142,12 +151,18 @@ services:
     hostname: schema-registry
     ports:
       - "8085:8085"
+      - "9994:9994"   # JMX Prometheus exporter port
     environment:
       SCHEMA_REGISTRY_HOST_NAME: schema-registry
       SCHEMA_REGISTRY_LISTENERS: http://0.0.0.0:8085
       SCHEMA_REGISTRY_KAFKASTORE_CONNECTION_URL: zookeeper:2181
       SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: kafka:9093
-      # Remove all other KAFKA_BROKER/SKIP_PREFLIGHT variables
+
+      SCHEMA_REGISTRY_OPTS: "-javaagent:/etc/jmx/jmx_prometheus_javaagent-0.20.0.jar=9994:/etc/jmx/kafka-jmx-config.yaml"
+
+    volumes:
+        - ./monitoring/jmx_prometheus_javaagent-0.20.0.jar:/etc/jmx/jmx_prometheus_javaagent-0.20.0.jar
+        - ./monitoring/kafka-jmx-config.yaml:/etc/jmx/kafka-jmx-config.yaml
 
     depends_on:
       - kafka # Keep this
@@ -162,6 +177,7 @@ services:
 
     networks:
       - paystream-network
+
   prometheus:
     image: prom/prometheus
     container_name: prometheus
@@ -174,7 +190,32 @@ services:
     networks:
       - paystream-network
 
+  grafana:
+    image: grafana/grafana
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+    volumes:
+      - grafana-storage:/var/lib/grafana
+    networks:
+      - paystream-network
+
+  kafka-exporter:
+    image: danielqsj/kafka-exporter:latest
+    command:
+      - "--kafka.server=kafka:9093"
+    ports:
+      - "9308:9308"
+    depends_on:
+      - kafka
+    networks:
+      - paystream-network
+
 
 networks:
     paystream-network:
       driver: bridge
+volumes:
+  grafana-storage:
